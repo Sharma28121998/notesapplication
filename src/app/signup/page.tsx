@@ -2,9 +2,12 @@
 
 import styles from './signup.module.css';
 import Link from 'next/link';
+import { useDispatch } from 'react-redux';
 import { useRouter } from 'next/navigation';
+import { setUser } from '@/store/slices/userSlice';
 
 const SignUp = () => {
+  const dispatch = useDispatch();
   const router = useRouter();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -16,12 +19,11 @@ const SignUp = () => {
       password: formData.get('password') as string
     };
     
-    // Store user data in localStorage
-    localStorage.setItem('user', JSON.stringify({
-      username: data.username,
+    // Store user data in Redux including password
+    dispatch(setUser({ 
+      username: data.username, 
       email: data.email,
-      password: data.password,
-      isAuthenticated: true
+      password: data.password 
     }));
     
     // Redirect to login page

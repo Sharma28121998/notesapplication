@@ -2,6 +2,8 @@
 
 import styles from './login.module.css';
 import Link from 'next/link';
+import { useSelector } from 'react-redux';
+import { RootState } from '../../store/store';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import InfoNote from '../components/InfoNote';
@@ -15,6 +17,7 @@ interface UserState {
 
 const Login = () => {
   const [error, setError] = useState('');
+  const user = useSelector((state: RootState) => state.user) as UserState;
   const router = useRouter();
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -23,16 +26,7 @@ const Login = () => {
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
-    // Get user data from localStorage
-    const userData = localStorage.getItem('user');
-    if (!userData) {
-      setError('Email not found. Please sign up to create an account.');
-      return;
-    }
-
-    const user = JSON.parse(userData) as UserState;
-
-    // Check if email exists
+    // Check if email exists in Redux store
     if (email !== user.email) {
       setError('Email not found. Please sign up to create an account.');
       return;

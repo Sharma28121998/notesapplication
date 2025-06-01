@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import styles from './dashboard.module.css';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '../../store/store';
+import { fetchNotes, addNote, updateNote, deleteNote } from '../../store/slices/notesSlice';
 import { useRouter } from 'next/navigation';
 import NoteModal from '../components/NoteModal';
 import Button from '../components/Button';
-import axios from 'axios';
-
-const API_URL = 'https://api.jsoneditoronline.org/v2/docs/91d987f45890499f8cb443be8bb3af29/data';
+import { clearUser } from '@/store/slices/userSlice';
 
 interface Note {
   id: number;
@@ -27,41 +28,30 @@ const Dashboard = () => {
     content: '',
     createdAt: ''
   });
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  const { notes, loading, error: notesError } = useSelector((state: RootState) => state.notes);
+  const { isAuthenticated } = useSelector((state: RootState) => state.user);
+  const dispatch = useDispatch<AppDispatch>();
   const router = useRouter();
 
   // Check authentication on component mount
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (!userData) {
+    if (!isAuthenticated) {
       router.push('/login');
-      return;
     }
-    const user = JSON.parse(userData);
-    setIsAuthenticated(user.isAuthenticated);
-  }, [router]);
-
-  const fetchNotes = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get(API_URL);
-      setNotes(response.data.notes);
-      setPageError('');
-    } catch (error) {
-      setPageError('Failed to fetch notes');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [isAuthenticated, router]);
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchNotes();
+      dispatch(fetchNotes());
     }
-  }, [isAuthenticated]);
+  }, [dispatch, isAuthenticated]);
+
+  useEffect(() => {
+    if (notesError) {
+      setPageError(notesError);
+    }
+  }, [notesError]);
 
   const handleEdit = (note: Note) => {
     setNewNote(note);
@@ -77,51 +67,23 @@ const Dashboard = () => {
 
   const confirmDelete = async () => {
     if (selectedNote) {
-      try {
-        setLoading(true);
-        const updatedNotes = notes.filter(note => note.id !== selectedNote.id);
-        await axios.put(API_URL, { notes: updatedNotes });
-        setNotes(updatedNotes);
-        setIsModalOpen(false);
-        setSelectedNote(null);
-        setPageError('');
-      } catch (error) {
-        setPageError('Failed to delete note');
-      } finally {
-        setLoading(false);
-      }
+      dispatch(deleteNote(selectedNote.id));
+      setIsModalOpen(false);
+      setSelectedNote(null);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    try {
-      setLoading(true);
-      if (modalMode === 'edit') {
-        const updatedNotes = notes.map(note =>
-          note.id === newNote.id ? newNote : note
-        );
-        await axios.put(API_URL, { notes: updatedNotes });
-        setNotes(updatedNotes);
-      } else {
-        const noteWithId = {
-          ...newNote,
-          id: notes.length + 1,
-          createdAt: new Date().toISOString()
-        };
-        const updatedNotes = [...notes, noteWithId];
-        await axios.put(API_URL, { notes: updatedNotes });
-        setNotes(updatedNotes);
-      }
-      setIsModalOpen(false);
-      setNewNote({ id: 0, title: '', content: '', createdAt: '' });
-      setPageError('');
-    } catch (error) {
-      setPageError(modalMode === 'edit' ? 'Failed to update note' : 'Failed to add note');
-    } finally {
-      setLoading(false);
+    if (modalMode === 'edit') {
+      dispatch(updateNote(newNote as Note));
+    } else {
+      dispatch(addNote({ title: newNote.title, content: newNote.content }));
     }
+
+    setIsModalOpen(false);
+    setNewNote({ id: 0, title: '', content: '', createdAt: '' });
   };
 
   const handleCancel = () => {
@@ -136,8 +98,7 @@ const Dashboard = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('user');
-    setIsAuthenticated(false);
+    dispatch(clearUser());
     router.push('/login');
   };
 
