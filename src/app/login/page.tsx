@@ -88,7 +88,7 @@ const Login = () => {
         </form>
 
         <p className={styles.signupLink}>
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Link href="/signup" className={styles.link}>
             Sign up
           </Link>
@@ -98,4 +98,4 @@ const Login = () => {
   );
 };
 
-export default Login; 
+export default Login;
